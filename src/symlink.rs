@@ -17,41 +17,52 @@ pub fn bin_dir() -> PathBuf {
     prefix().join("bin")
 }
 
-/// Activate a cached version by creating/updating a symlink.
-///
-/// Node.js tarballs extract to `node-v{version}-{os}-{arch}/bin/node`, so
-/// after flattening the cache directory contains `bin/node`. We symlink from
-/// `~/.n/bin/node` → the cached binary.
+fn remove_bin_symlink(bin: &std::path::Path) {
+    if bin.symlink_metadata().is_ok() {
+        #[cfg(unix)]
+        {
+            fs::remove_file(bin).ok();
+        }
+        #[cfg(windows)]
+        {
+            fs::remove_dir(bin).ok();
+        }
+    }
+}
+
+/// Activate a cached version by pointing `~/.n/bin` at the cached version's
+/// `bin/` subdirectory as a single directory symlink. This picks up `node`,
+/// `npm`, `npx`, `corepack`, and any other scripts automatically.
 pub fn activate(version_tag: &str) -> Result<()> {
     let bin = bin_dir();
-    fs::create_dir_all(&bin).context("Failed to create bin directory")?;
 
-    let node_src = crate::cache::node_binary(version_tag);
+    let cached_bin = crate::cache::version_dir(version_tag).join("bin");
+    anyhow::ensure!(
+        cached_bin.is_dir(),
+        "Cached bin directory not found: {}",
+        cached_bin.display()
+    );
 
-    #[cfg(target_os = "windows")]
-    let link_path = bin.join("node.exe");
-    #[cfg(not(target_os = "windows"))]
-    let link_path = bin.join("node");
-
-    if link_path.exists() || link_path.symlink_metadata().is_ok() {
-        fs::remove_file(&link_path).ok();
+    if let Some(parent) = bin.parent() {
+        fs::create_dir_all(parent).context("Failed to create prefix directory")?;
     }
 
+    remove_bin_symlink(&bin);
+
     #[cfg(unix)]
-    std::os::unix::fs::symlink(&node_src, &link_path).with_context(|| {
+    std::os::unix::fs::symlink(&cached_bin, &bin).with_context(|| {
         format!(
             "Failed to create symlink {} -> {}",
-            link_path.display(),
-            node_src.display()
+            bin.display(),
+            cached_bin.display()
         )
     })?;
-
     #[cfg(windows)]
-    std::os::windows::fs::symlink_file(&node_src, &link_path).with_context(|| {
+    std::os::windows::fs::symlink_dir(&cached_bin, &bin).with_context(|| {
         format!(
             "Failed to create symlink {} -> {}",
-            link_path.display(),
-            node_src.display()
+            bin.display(),
+            cached_bin.display()
         )
     })?;
 
@@ -69,17 +80,12 @@ pub fn active_version() -> Option<String> {
         .map(|s| s.trim().to_string())
 }
 
-/// Remove the active node symlink (does not remove cache).
+/// Remove the active `~/.n/bin` directory symlink (does not remove cache).
 pub fn uninstall() -> Result<()> {
     let bin = bin_dir();
 
-    #[cfg(target_os = "windows")]
-    let link_path = bin.join("node.exe");
-    #[cfg(not(target_os = "windows"))]
-    let link_path = bin.join("node");
-
-    if link_path.exists() || link_path.symlink_metadata().is_ok() {
-        fs::remove_file(&link_path).context("Failed to remove node symlink")?;
+    if bin.symlink_metadata().is_ok() {
+        remove_bin_symlink(&bin);
         println!("Removed active Node.js installation.");
     } else {
         println!("No active Node.js installation found.");
