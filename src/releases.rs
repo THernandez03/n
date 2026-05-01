@@ -52,8 +52,7 @@ pub fn list_remote() -> Result<()> {
 ///
 /// Aliases supported:
 /// - `"lts"` / `"stable"` → latest LTS release
-/// - `"latest"` / `"current"` / `""` → newest release (may not be LTS)
-/// - `"canary"` / `"next"` → same as latest (Node has no canary channel)
+/// - `"latest"` / `"current"` / `"canary"` / `"next"` / `"nightly"` / `"edge"` / `""` → newest release (may not be LTS)
 /// - `"20"` / `"20.x"` / `"v20"` → latest release in major 20
 /// - `"20.11"` / `"20.11.x"` → latest patch in 20.11
 /// - `"20.11.0"` / `"v20.11.0"` → exact version, no network lookup needed
@@ -77,7 +76,7 @@ pub fn resolve_from(version_str: &str, releases: &[NodeRelease]) -> Result<Strin
     let bare = v.strip_prefix('v').unwrap_or(v);
 
     match bare {
-        "" | "latest" | "current" | "canary" | "next" => {
+        "" | "latest" | "current" | "canary" | "next" | "nightly" | "edge" => {
             return releases
                 .first()
                 .map(|r| r.version.clone())
@@ -217,6 +216,18 @@ mod tests {
     #[test]
     fn resolve_canary_returns_first() {
         let r = resolve_from("canary", &stable_releases()).unwrap();
+        assert_eq!(r, "v22.0.0");
+    }
+
+    #[test]
+    fn resolve_nightly_returns_first() {
+        let r = resolve_from("nightly", &stable_releases()).unwrap();
+        assert_eq!(r, "v22.0.0");
+    }
+
+    #[test]
+    fn resolve_edge_returns_first() {
+        let r = resolve_from("edge", &stable_releases()).unwrap();
         assert_eq!(r, "v22.0.0");
     }
 }
