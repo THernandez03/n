@@ -24,6 +24,18 @@
 
 ## Installation
 
+### Pre-built binary (no Rust required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/THernandez03/n/main/install.sh | sh
+```
+
+This installs `n` to `~/.local/bin/n`. You can override the destination:
+
+```bash
+INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/THernandez03/n/main/install.sh | sh
+```
+
 ### From source (requires Rust)
 
 ```bash
@@ -41,7 +53,8 @@ Add `~/.n/bin` to your `PATH`:
 ```bash
 # bash / zsh
 export N_PREFIX="$HOME/.n"
-export PATH="$N_PREFIX/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"  # for the n binary
+export PATH="$N_PREFIX/bin:$PATH"     # for managed Node.js binaries
 ```
 
 Optional environment variables:
