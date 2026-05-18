@@ -119,6 +119,15 @@ n uninstall
 | `20.x`    | Same as `20`                     |
 | `20.11`   | Latest patch in 20.11            |
 
+## Related Projects
+
+| Project | Runtime |
+|---------|---------|
+| [b](https://github.com/THernandez03/b) | Bun version manager |
+| [z](https://github.com/THernandez03/z) | Zig version manager |
+| [d](https://github.com/THernandez03/d) | Deno version manager |
+| [r](https://github.com/THernandez03/r) | Rust version manager |
+
 ## License
 
 MIT
