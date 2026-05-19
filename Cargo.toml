@@ -1,6 +1,6 @@
 [package]
 name = "n"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Interactively manage your Node.js versions"
 license = "MIT"

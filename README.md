@@ -120,6 +120,12 @@ n uninstall
 | `20.x`    | Same as `20`                    |
 | `20.11`   | Latest patch in 20.11           |
 
+## How It Works
+
+`n` downloads prebuilt Node.js tarballs from [nodejs.org](https://nodejs.org/dist/), caches them under `~/.n/versions/<tag>/`, and creates a symlink at `~/.n/bin/node` pointing to the selected version.
+
+No subshells. No profile setup. Just a symlink.
+
 ## Related Projects
 
 | Project                                | Runtime              |
