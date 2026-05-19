@@ -146,9 +146,16 @@ mod tests {
 
     #[test]
     fn default_index_for_active_version() {
-        let versions = ["v22.0.0".to_string(), "v20.11.0".to_string(), "v18.0.0".to_string()];
+        let versions = [
+            "v22.0.0".to_string(),
+            "v20.11.0".to_string(),
+            "v18.0.0".to_string(),
+        ];
         let active = Some("v20.11.0".to_string());
-        let idx = versions.iter().position(|v| Some(v) == active.as_ref()).unwrap_or(0);
+        let idx = versions
+            .iter()
+            .position(|v| Some(v) == active.as_ref())
+            .unwrap_or(0);
         assert_eq!(idx, 1);
     }
 

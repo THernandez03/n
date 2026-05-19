@@ -20,11 +20,7 @@ pub const fn arch_str() -> &'static str {
     return "arm64";
     #[cfg(target_arch = "arm")]
     return "armv7l";
-    #[cfg(not(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "arm",
-    )))]
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm",)))]
     return "x64"; // fallback
 }
 

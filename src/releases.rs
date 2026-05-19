@@ -42,7 +42,9 @@ pub fn list_remote() -> Result<()> {
     let releases = fetch_releases()?;
     println!("Available Node.js versions (recent 20):");
     for r in releases.iter().take(20) {
-        let lts = r.lts_name().map_or(String::new(), |n| format!(" (LTS: {n})"));
+        let lts = r
+            .lts_name()
+            .map_or(String::new(), |n| format!(" (LTS: {n})"));
         println!("  {}{}", r.version, lts);
     }
     Ok(())
