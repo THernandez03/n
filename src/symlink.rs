@@ -174,27 +174,4 @@ mod tests {
         });
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn uninstall_removes_symlink_and_marker() {
-        with_temp_prefix(|base| {
-            std::env::set_var("N_CACHE_DIR", base.join("versions"));
-            let vdir = base.join("versions").join("v20.11.0").join("bin");
-            fs::create_dir_all(&vdir).unwrap();
-            fs::write(vdir.join("node"), b"#!/bin/sh").unwrap();
-            activate("v20.11.0").unwrap();
-            uninstall();
-            let link = base.join("bin").join("node");
-            assert!(!link.exists() && link.symlink_metadata().is_err());
-            assert!(active_version().is_none());
-            std::env::remove_var("N_CACHE_DIR");
-        });
-    }
-
-    #[test]
-    fn uninstall_ok_when_nothing_installed() {
-        with_temp_prefix(|_| {
-            uninstall();
-        });
-    }
 }

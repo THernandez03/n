@@ -242,7 +242,7 @@ pub fn update_self() -> Result<()> {
     println!("{} Checking for {} updates...", style("◆").cyan(), name);
     let client = reqwest::blocking::Client::new();
     let release: serde_json::Value = client
-        .get(&format!(
+        .get(format!(
             "https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
         ))
         .header("User-Agent", format!("{name}-version-manager"))
@@ -272,9 +272,7 @@ pub fn update_self() -> Result<()> {
         style(remote).cyan().bold()
     );
     let artifact = self_artifact();
-    let url = format!(
-        "https://github.com/{GITHUB_REPO}/releases/download/{tag}/{artifact}"
-    );
+    let url = format!("https://github.com/{GITHUB_REPO}/releases/download/{tag}/{artifact}");
     let exe = std::env::current_exe().context("Failed to locate current executable")?;
     let tmp = exe.with_extension("update-tmp");
     {
@@ -294,7 +292,9 @@ pub fn update_self() -> Result<()> {
             if n == 0 {
                 break;
             }
-            writer.write_all(&buf[..n]).context("Write error during download")?;
+            writer
+                .write_all(&buf[..n])
+                .context("Write error during download")?;
         }
     }
     #[cfg(unix)]
@@ -334,8 +334,7 @@ pub fn uninstall_self() -> Result<()> {
         println!("  {} Removed {}", style("✓").green(), prefix.display());
     }
     let exe = std::env::current_exe().context("Failed to locate current executable")?;
-    fs::remove_file(&exe)
-        .with_context(|| format!("Failed to remove {}", exe.display()))?;
+    fs::remove_file(&exe).with_context(|| format!("Failed to remove {}", exe.display()))?;
     println!("  {} Removed {}", style("✓").green(), exe.display());
     println!();
     println!(
