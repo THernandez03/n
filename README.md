@@ -96,6 +96,9 @@ n rm v18.0.0        # alias
 # Remove all except active
 n prune
 
+# Also remove the active version
+n prune --force
+
 # Show info
 n info
 
@@ -104,6 +107,7 @@ n update
 
 # Fully remove n + all cached versions (requires confirmation)
 n uninstall
+n uninstall --yes   # skip confirmation prompt
 ```
 
 ## Version Aliases
