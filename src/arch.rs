@@ -37,15 +37,17 @@ pub const fn archive_ext() -> &'static str {
 ///
 /// # Example
 /// ```
-/// let url = n::arch::download_url("v20.11.0");
+/// let url = n::arch::download_url("20.11.0");
 /// ```
 #[must_use]
 pub fn download_url(version_tag: &str) -> String {
     let os = os_str();
     let arch = arch_str();
     let ext = archive_ext();
-    let filename = format!("node-{version_tag}-{os}-{arch}.{ext}");
-    format!("https://nodejs.org/dist/{version_tag}/{filename}")
+    // Node.js dist URLs always use the v-prefixed form regardless of the cache key.
+    let v_tag = format!("v{}", version_tag.trim_start_matches('v'));
+    let filename = format!("node-{v_tag}-{os}-{arch}.{ext}");
+    format!("https://nodejs.org/dist/{v_tag}/{filename}")
 }
 
 #[cfg(test)]
@@ -84,26 +86,26 @@ mod tests {
 
     #[test]
     fn download_url_contains_version() {
-        let url = download_url("v20.11.0");
+        let url = download_url("20.11.0");
         assert!(url.contains("v20.11.0"), "url: {url}");
     }
 
     #[test]
     fn download_url_starts_with_nodejs_dist() {
-        let url = download_url("v20.11.0");
+        let url = download_url("20.11.0");
         assert!(url.starts_with("https://nodejs.org/dist/"));
     }
 
     #[test]
     fn download_url_contains_os_and_arch() {
-        let url = download_url("v20.11.0");
+        let url = download_url("20.11.0");
         assert!(url.contains(os_str()));
         assert!(url.contains(arch_str()));
     }
 
     #[test]
     fn download_url_ends_with_archive_ext() {
-        let url = download_url("v20.11.0");
+        let url = download_url("20.11.0");
         assert!(url.ends_with(archive_ext()), "url: {url}");
     }
 }

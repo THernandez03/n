@@ -50,21 +50,25 @@ pub fn list_remote() -> Result<()> {
     Ok(())
 }
 
-/// Resolve a user-supplied version string to an exact version tag (e.g. `v20.11.0`).
+/// Resolve a user-supplied version string to an exact version tag (e.g. `22.11.0`).
 ///
 /// Aliases supported:
-/// - `"lts"` / `"stable"` → latest LTS release
-/// - `"latest"` / `"current"` / `"canary"` / `"next"` / `"nightly"` / `"edge"` / `""` → newest release (may not be LTS)
-/// - `"20"` / `"20.x"` / `"v20"` → latest release in major 20
+/// - `"lts"` / `"stable"` / `"current"` → latest LTS release
+/// - `"latest"` / `"canary"` / `"next"` / `"nightly"` / `"edge"` / `""` → newest release (may not be LTS)
+/// - `"20"` / `"20.x"` → latest release in major 20
 /// - `"20.11"` / `"20.11.x"` → latest patch in 20.11
-/// - `"20.11.0"` / `"v20.11.0"` → exact version, no network lookup needed
+/// - `"20.11.0"` → exact version, no network lookup needed
 pub fn resolve_tag(version_str: &str) -> Result<String> {
     let v = version_str.trim();
 
-    // Exact version — three-part semver with optional leading `v`
-    let bare = v.strip_prefix('v').unwrap_or(v);
-    if bare.split('.').count() >= 3 && bare.chars().all(|c| c.is_ascii_digit() || c == '.') {
-        return Ok(format!("v{bare}"));
+    // Reject v-prefixed version strings
+    if v.starts_with('v') && v[1..].starts_with(|c: char| c.is_ascii_digit()) {
+        anyhow::bail!("No Node.js release found matching '{v}'");
+    }
+
+    // Exact version — three-part semver (no leading v)
+    if v.split('.').count() >= 3 && v.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        return Ok(v.to_string());
     }
 
     // Aliases that need the release list
@@ -75,34 +79,42 @@ pub fn resolve_tag(version_str: &str) -> Result<String> {
 /// Pure resolver that operates on a pre-fetched list (used by tests).
 pub fn resolve_from(version_str: &str, releases: &[NodeRelease]) -> Result<String> {
     let v = version_str.trim();
-    let bare = v.strip_prefix('v').unwrap_or(v);
 
-    match bare {
-        "" | "latest" | "current" | "canary" | "next" | "nightly" | "edge" => {
+    // Reject v-prefixed version strings
+    if v.starts_with('v') && v[1..].starts_with(|c: char| c.is_ascii_digit()) {
+        anyhow::bail!("No Node.js release found matching '{v}'");
+    }
+
+    if v == "beta" {
+        anyhow::bail!("'beta' channel is not supported for Node.js");
+    }
+
+    match v {
+        "" | "latest" | "canary" | "next" | "nightly" | "edge" => {
             return releases
                 .first()
-                .map(|r| r.version.clone())
+                .map(|r| r.version.trim_start_matches('v').to_string())
                 .ok_or_else(|| anyhow::anyhow!("No Node.js releases found"));
         }
-        "lts" | "stable" => {
+        "lts" | "stable" | "current" => {
             return releases
                 .iter()
                 .find(|r| r.is_lts())
-                .map(|r| r.version.clone())
+                .map(|r| r.version.trim_start_matches('v').to_string())
                 .ok_or_else(|| anyhow::anyhow!("No LTS Node.js release found"));
         }
         _ => {}
     }
 
     // Strip trailing .x / .X suffix from partial versions
-    let prefix = bare.trim_end_matches(".x").trim_end_matches(".X");
+    let prefix = v.trim_end_matches(".x").trim_end_matches(".X");
 
     // Try to find the first release whose semver starts with `v{prefix}.`
     let needle = format!("v{prefix}.");
     releases
         .iter()
         .find(|r| r.version.starts_with(&needle) || r.version == format!("v{prefix}"))
-        .map(|r| r.version.clone())
+        .map(|r| r.version.trim_start_matches('v').to_string())
         .ok_or_else(|| anyhow::anyhow!("No Node.js release found matching '{version_str}'"))
 }
 
@@ -158,51 +170,55 @@ mod tests {
     #[test]
     fn resolve_latest_returns_first() {
         let r = resolve_from("latest", &stable_releases()).unwrap();
-        assert_eq!(r, "v22.0.0");
+        assert_eq!(r, "22.0.0");
     }
 
     #[test]
-    fn resolve_current_returns_first() {
+    fn resolve_current_returns_lts() {
+        // current now maps to the latest LTS, same as lts/stable
         let r = resolve_from("current", &stable_releases()).unwrap();
-        assert_eq!(r, "v22.0.0");
+        assert_eq!(r, "20.11.0");
+    }
+
+    #[test]
+    fn resolve_beta_returns_error() {
+        assert!(resolve_from("beta", &stable_releases()).is_err());
     }
 
     #[test]
     fn resolve_lts_returns_first_lts() {
         let r = resolve_from("lts", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.11.0");
+        assert_eq!(r, "20.11.0");
     }
 
     #[test]
     fn resolve_stable_returns_first_lts() {
         let r = resolve_from("stable", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.11.0");
+        assert_eq!(r, "20.11.0");
     }
 
     #[test]
     fn resolve_major_returns_latest_in_major() {
         let r = resolve_from("20", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.11.0");
+        assert_eq!(r, "20.11.0");
     }
 
     #[test]
     fn resolve_major_x_notation() {
         let r = resolve_from("20.x", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.11.0");
+        assert_eq!(r, "20.11.0");
     }
 
     #[test]
     fn resolve_minor_prefix() {
         let r = resolve_from("20.10", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.10.0");
+        assert_eq!(r, "20.10.0");
     }
 
     #[test]
-    fn resolve_exact_with_v_prefix() {
-        // exact 3-part versions skip the network in resolve_tag;
-        // in resolve_from they go through prefix matching
-        let r = resolve_from("v20.11.0", &stable_releases()).unwrap();
-        assert_eq!(r, "v20.11.0");
+    fn resolve_exact_with_v_prefix_rejected() {
+        // v-prefixed inputs are actively rejected
+        assert!(resolve_from("v20.11.0", &stable_releases()).is_err());
     }
 
     #[test]
@@ -218,18 +234,18 @@ mod tests {
     #[test]
     fn resolve_canary_returns_first() {
         let r = resolve_from("canary", &stable_releases()).unwrap();
-        assert_eq!(r, "v22.0.0");
+        assert_eq!(r, "22.0.0");
     }
 
     #[test]
     fn resolve_nightly_returns_first() {
         let r = resolve_from("nightly", &stable_releases()).unwrap();
-        assert_eq!(r, "v22.0.0");
+        assert_eq!(r, "22.0.0");
     }
 
     #[test]
     fn resolve_edge_returns_first() {
         let r = resolve_from("edge", &stable_releases()).unwrap();
-        assert_eq!(r, "v22.0.0");
+        assert_eq!(r, "22.0.0");
     }
 }
